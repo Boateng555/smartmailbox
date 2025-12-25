@@ -51,7 +51,15 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-_@24pf*j*m8!^6$jlp-g9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*', cast=Csv)
+# ALLOWED_HOSTS - convert string to list
+_allowed_hosts = config('ALLOWED_HOSTS', default='*')
+if isinstance(_allowed_hosts, str):
+    if _allowed_hosts == '*':
+        ALLOWED_HOSTS = ['*']
+    else:
+        ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts.split(',') if h.strip()]
+else:
+    ALLOWED_HOSTS = _allowed_hosts if _allowed_hosts else ['*']
 
 
 # Application definition
