@@ -176,6 +176,11 @@ STATICFILES_DIRS = [
 if not DEBUG:
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
     MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+    
+    # Nginx/Proxy settings
+    USE_TZ = True
+    SECURE_PROXY_SSL_HEADER = None  # Set to ('HTTP_X_FORWARDED_PROTO', 'https') if using HTTPS
+    CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://194.164.59.137', cast=Csv)
 
 # Media files (for firmware uploads)
 MEDIA_URL = '/media/'
