@@ -1,0 +1,155 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: smartmailbox_db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-smartmailbox}
+      POSTGRES_USER: ${POSTGRES_USER:-smartmailbox_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"  # Only expose on localhost
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-smartmailbox_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - smartmailbox_network
+    restart: unless-stopped
+    command: >
+      postgres
+      -c shared_buffers=256MB
+      -c max_connections=200
+      -c effective_cache_size=1GB
+      -c maintenance_work_mem=64MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=4MB
+      -c min_wal_size=1GB
+      -c max_wal_size=4GB
+
+  redis:
+    image: redis:7-alpine
+    container_name: smartmailbox_redis
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "127.0.0.1:6379:6379"  # Only expose on localhost
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - smartmailbox_network
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ./django-webapp
+      dockerfile: Dockerfile
+    container_name: smartmailbox_web
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --noinput &&
+             daphne -b 0.0.0.0 -p 8001 iot_platform.asgi:application"
+    volumes:
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+      - logs_volume:/app/logs
+      - backup_volume:/app/backups
+    ports:
+      - "127.0.0.1:8001:8001"  # Only expose on localhost for nginx
+    env_file:
+      - .env.production
+    environment:
+      - DJANGO_SETTINGS_MODULE=iot_platform.settings_production
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-smartmailbox_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-smartmailbox}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - smartmailbox_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  nginx:
+    image: nginx:alpine
+    container_name: smartmailbox_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - static_volume:/static:ro
+      - media_volume:/media:ro
+      - ./nginx/certbot:/var/www/certbot:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro  # Mount Let's Encrypt certificates from host
+    depends_on:
+      - web
+    networks:
+      - smartmailbox_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: smartmailbox_certbot
+    volumes:
+      - certbot_data:/etc/letsencrypt
+      - ./nginx/certbot:/var/www/certbot:rw
+    command: certonly --webroot --webroot-path=/var/www/certbot --email ${LETSENCRYPT_EMAIL} --agree-tos --no-eff-email -d ${DOMAIN} -d www.${DOMAIN}
+    networks:
+      - smartmailbox_network
+    profiles:
+      - certbot  # Only run when explicitly requested
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  static_volume:
+    driver: local
+  media_volume:
+    driver: local
+  logs_volume:
+    driver: local
+  backup_volume:
+    driver: local
+  certbot_data:
+    driver: local
+
+networks:
+  smartmailbox_network:
+    driver: bridge
+

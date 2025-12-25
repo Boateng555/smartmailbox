@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mail Detected in Your Smart Mailbox</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #2c3e50;
+            margin: 0;
+            font-size: 24px;
+        }
+        .info-section {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #666;
+        }
+        .info-value {
+            color: #333;
+        }
+        .analysis-section {
+            background-color: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .analysis-title {
+            font-weight: 600;
+            color: #2e7d32;
+            margin-bottom: 10px;
+        }
+        .photos-section {
+            margin: 30px 0;
+        }
+        .photos-note {
+            font-size: 14px;
+            color: #666;
+            font-style: italic;
+            margin-top: 10px;
+        }
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #2196F3;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .button:hover {
+            background-color: #1976D2;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+        }
+        .timestamp {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📬 Mail in Your Smart Mailbox</h1>
+        </div>
+        
+        <div class="info-section">
+            <div class="info-row">
+                <span class="info-label">Time Detected:</span>
+                <span class="info-value">{{ timestamp|date:"F d, Y g:i A" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Device:</span>
+                <span class="info-value">{{ device.serial_number }}</span>
+            </div>
+        </div>
+        
+        {% if analysis %}
+        <div class="analysis-section">
+            <div class="analysis-title">AI Analysis:</div>
+            <div><strong>{{ summary }}</strong></div>
+            {% if mail_type %}
+            <div style="margin-top: 10px;">
+                <span class="info-label">Type:</span> {{ mail_type|title }}
+            </div>
+            {% endif %}
+            {% if mail_size %}
+            <div>
+                <span class="info-label">Size:</span> {{ mail_size|title }}
+            </div>
+            {% endif %}
+            {% if carrier %}
+            <div>
+                <span class="info-label">Carrier:</span> {{ carrier }}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <div class="photos-section">
+            <p><strong>3 photos attached</strong> (thumbnails for email - full resolution available in web app)</p>
+            <p class="photos-note">Note: Images are compressed for email delivery. View full resolution photos in the web app.</p>
+        </div>
+        
+        {% if view_url %}
+        <div style="text-align: center;">
+            <a href="{{ view_url }}" class="button">View Full Details & Photos</a>
+        </div>
+        {% endif %}
+        
+        <div class="footer">
+            <p>This is an automated notification from your Smart Mailbox system.</p>
+            <p>Reply to this email to acknowledge receipt of your mail.</p>
+            <p class="timestamp">Sent at {{ timestamp|date:"g:i A" }} on {{ timestamp|date:"F d, Y" }}</p>
+        </div>
+    </div>
+</body>
+</html>

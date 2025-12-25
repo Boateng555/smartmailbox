@@ -1,0 +1,40 @@
+[Unit]
+Description=Smart Camera Django ASGI Application (Daphne)
+After=network.target postgresql.service redis-server.service django.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/smartcamera/django-webapp
+Environment="PATH=/var/www/smartcamera/django-webapp/venv/bin"
+Environment="DJANGO_SETTINGS_MODULE=iot_platform.settings_production"
+
+# Load environment variables from .env file
+EnvironmentFile=/var/www/smartcamera/django-webapp/.env
+
+# Daphne executable for WebSocket support
+ExecStart=/var/www/smartcamera/django-webapp/venv/bin/daphne \
+    -b 127.0.0.1 \
+    -p 8001 \
+    --access-log /var/log/smartcamera/daphne-access.log \
+    --proxy-headers \
+    iot_platform.asgi:application
+
+# Restart on failure
+Restart=always
+RestartSec=10
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
+
+
+
+
+
+
+

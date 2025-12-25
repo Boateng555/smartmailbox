@@ -1,0 +1,310 @@
+{% extends 'web/base.html' %}
+
+{% block title %}Debug Tools - IoT Platform{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #667eea;
+    }
+    .stat-label {
+        color: #6b7280;
+        font-size: 0.875rem;
+        margin-top: 4px;
+    }
+    .connection-badge {
+        display: inline-block;
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .connection-wifi {
+        background: #ede9fe;
+        color: #7c3aed;
+    }
+    .connection-cellular {
+        background: #dbeafe;
+        color: #2563eb;
+    }
+    .connection-unknown {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900">Debug Tools</h1>
+        <p class="text-gray-600 text-sm mt-1">System status and diagnostics</p>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <div class="stat-card">
+            <div class="stat-value">{{ device_stats.total }}</div>
+            <div class="stat-label">Total Devices</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value text-green-600">{{ device_stats.online }}</div>
+            <div class="stat-label">Online</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value text-gray-600">{{ device_stats.offline }}</div>
+            <div class="stat-label">Offline</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value text-purple-600">{{ device_stats.wifi }}</div>
+            <div class="stat-label">WiFi</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value text-blue-600">{{ device_stats.cellular }}</div>
+            <div class="stat-label">Cellular</div>
+        </div>
+    </div>
+
+    <!-- SIM Card Statistics -->
+    {% if sim_stats.total > 0 %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">SIM Card Statistics</h2>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div>
+                <div class="text-2xl font-bold text-gray-900">{{ sim_stats.total }}</div>
+                <div class="text-sm text-gray-600">Total SIM Cards</div>
+            </div>
+            <div>
+                <div class="text-2xl font-bold text-yellow-600">{{ sim_stats.near_limit }}</div>
+                <div class="text-sm text-gray-600">Near Limit (≥80%)</div>
+            </div>
+            <div>
+                <div class="text-2xl font-bold text-red-600">{{ sim_stats.over_limit }}</div>
+                <div class="text-sm text-gray-600">Over Limit</div>
+            </div>
+            <div>
+                <div class="text-2xl font-bold text-gray-900">{{ sim_stats.total_data_used|floatformat:2 }}</div>
+                <div class="text-sm text-gray-600">Total Data Used (MB)</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- All Devices Table -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">All Devices</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Serial</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Connection</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Owner</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Last Seen</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Captures</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for device in devices %}
+                    <tr>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ device.serial_number }}</td>
+                        <td class="px-4 py-3 text-sm">
+                            {% if device.status == 'online' %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    Online
+                                </span>
+                            {% elif device.status == 'offline' %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    Offline
+                                </span>
+                            {% else %}
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    Maintenance
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm">
+                            {% if device.connection_type == 'wifi' %}
+                                <span class="connection-badge connection-wifi">WiFi</span>
+                            {% elif device.connection_type == 'cellular' %}
+                                <span class="connection-badge connection-cellular">Cellular</span>
+                            {% else %}
+                                <span class="connection-badge connection-unknown">Unknown</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-600">{{ device.owner.username }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-600">{{ device.last_seen|timesince }} ago</td>
+                        <td class="px-4 py-3 text-sm text-gray-600">{{ device.captures.count }}</td>
+                        <td class="px-4 py-3 text-sm">
+                            <button 
+                                onclick="testWebSocket('{{ device.serial_number }}')" 
+                                class="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+                            >
+                                Test WS
+                            </button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="px-4 py-8 text-center text-gray-500">No devices found</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Recent Captures -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">Recent API Calls (Last 50 Captures)</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Device</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Connection</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Data Size</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Motion</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for capture in recent_captures %}
+                    <tr>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ capture.device.serial_number }}</td>
+                        <td class="px-4 py-3 text-sm">
+                            {% if capture.connection_type == 'wifi' %}
+                                <span class="connection-badge connection-wifi">WiFi</span>
+                            {% elif capture.connection_type == 'cellular' %}
+                                <span class="connection-badge connection-cellular">Cellular</span>
+                            {% else %}
+                                <span class="connection-badge connection-unknown">Unknown</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-600">
+                            {% if capture.data_size_bytes %}
+                                {{ capture.data_size_bytes|filesizeformat }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm">
+                            {% if capture.device.ir_sensor_status == 'motion_detected' %}
+                                <span class="text-red-600">Yes</span>
+                            {% else %}
+                                <span class="text-gray-400">No</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-600">{{ capture.captured_at|date:"Y-m-d H:i:s" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-4 py-8 text-center text-gray-500">No captures yet</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- SIM Cards -->
+    {% if sim_cards %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <h2 class="text-xl font-bold text-gray-900 mb-4">SIM Cards</h2>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ICCID</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Device</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Used</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Limit</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Usage %</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    {% for sim in sim_cards %}
+                    <tr>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ sim.iccid }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-600">
+                            {% if sim.device %}
+                                {{ sim.device.serial_number }}
+                            {% else %}
+                                <span class="text-gray-400">Unassigned</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-600">{{ sim.data_used_mb|floatformat:2 }} MB</td>
+                        <td class="px-4 py-3 text-sm text-gray-600">{{ sim.plan_mb }} MB</td>
+                        <td class="px-4 py-3 text-sm">
+                            <div class="flex items-center">
+                                <div class="w-16 bg-gray-200 rounded-full h-2 mr-2">
+                                    <div class="bg-blue-600 h-2 rounded-full" style="width: {% if sim.data_used_percent > 100 %}100{% else %}{{ sim.data_used_percent }}{% endif %}%"></div>
+                                </div>
+                                <span class="text-xs">{{ sim.data_used_percent|floatformat:1 }}%</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-3 text-sm">
+                            {% if sim.is_over_limit %}
+                                <span class="text-red-600 font-semibold">Over Limit</span>
+                            {% elif sim.is_near_limit %}
+                                <span class="text-yellow-600 font-semibold">Near Limit</span>
+                            {% else %}
+                                <span class="text-green-600">OK</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function testWebSocket(serial) {
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Testing...';
+        button.disabled = true;
+        
+        fetch(`/debug/test-websocket/${serial}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    alert(`✓ ${data.message}`);
+                } else {
+                    alert(`✗ ${data.message}`);
+                }
+            })
+            .catch(error => {
+                alert(`✗ Error: ${error.message}`);
+            })
+            .finally(() => {
+                button.textContent = originalText;
+                button.disabled = false;
+            });
+    }
+</script>
+{% endblock %}
+
+
+
+
+
+
+

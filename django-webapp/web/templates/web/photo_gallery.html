@@ -1,0 +1,156 @@
+{% extends 'web/base.html' %}
+
+{% block title %}Photo Gallery - Smart Mailbox{% endblock %}
+
+{% block extra_css %}
+<style>
+    .gallery-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 12px;
+    }
+    .gallery-item {
+        aspect-ratio: 1;
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+        background: #f3f4f6;
+    }
+    .gallery-item img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .gallery-item-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.7), transparent);
+        padding: 8px;
+        color: white;
+        font-size: 10px;
+    }
+    .filter-tabs {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        padding-bottom: 8px;
+        -webkit-overflow-scrolling: touch;
+    }
+    .filter-tab {
+        white-space: nowrap;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto px-4 py-6 content-wrapper">
+    <!-- Header -->
+    <div class="mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Photo Gallery</h1>
+                {% if device %}
+                    <p class="text-sm text-gray-600 mt-1">{{ device.serial_number }}</p>
+                {% else %}
+                    <p class="text-sm text-gray-600 mt-1">All devices</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Filter Tabs -->
+        <div class="filter-tabs">
+            <a href="?type=all" class="filter-tab {% if filter_type == 'all' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700{% endif %}">
+                All
+            </a>
+            <a href="?type=package" class="filter-tab {% if filter_type == 'package' %}bg-green-600 text-white{% else %}bg-gray-100 text-gray-700{% endif %}">
+                📦 Packages
+            </a>
+            <a href="?type=letter" class="filter-tab {% if filter_type == 'letter' %}bg-blue-600 text-white{% else %}bg-gray-100 text-gray-700{% endif %}">
+                ✉️ Letters
+            </a>
+            <a href="?type=envelope" class="filter-tab {% if filter_type == 'envelope' %}bg-orange-600 text-white{% else %}bg-gray-100 text-gray-700{% endif %}">
+                📮 Envelopes
+            </a>
+        </div>
+    </div>
+    
+    <!-- Gallery Grid -->
+    {% if captures %}
+        <div class="gallery-grid">
+            {% for capture in captures %}
+                <a href="{% url 'web:device_detail' capture.device.serial_number %}" class="gallery-item">
+                    {% if capture.image_base64 %}
+                        <img src="data:image/jpeg;base64,{{ capture.image_base64|slice:':500' }}" 
+                             alt="Capture {{ capture.id }}"
+                             loading="lazy">
+                    {% endif %}
+                    <div class="gallery-item-overlay">
+                        {% if capture.analysis %}
+                            <div class="flex items-center gap-1 flex-wrap">
+                                {% if capture.analysis.package_detected %}
+                                    <span class="bg-green-500 px-1.5 py-0.5 rounded text-xs">📦</span>
+                                {% endif %}
+                                {% if capture.analysis.letter_detected %}
+                                    <span class="bg-blue-500 px-1.5 py-0.5 rounded text-xs">✉️</span>
+                                {% endif %}
+                                {% if capture.analysis.envelope_detected %}
+                                    <span class="bg-orange-500 px-1.5 py-0.5 rounded text-xs">📮</span>
+                                {% endif %}
+                            </div>
+                            {% if capture.analysis.estimated_size %}
+                                <div class="mt-1 text-xs">{{ capture.analysis.estimated_size }}</div>
+                            {% endif %}
+                        {% endif %}
+                        <div class="mt-1 text-xs opacity-75">{{ capture.timestamp|date:"M d" }}</div>
+                    </div>
+                </a>
+            {% endfor %}
+        </div>
+        
+        <!-- Pagination -->
+        {% if captures.has_other_pages %}
+            <div class="mt-6 flex items-center justify-center gap-2">
+                {% if captures.has_previous %}
+                    <a href="?page={{ captures.previous_page_number }}{% if filter_type != 'all' %}&type={{ filter_type }}{% endif %}" 
+                       class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Previous
+                    </a>
+                {% endif %}
+                
+                <span class="px-4 py-2 text-sm text-gray-700">
+                    Page {{ captures.number }} of {{ captures.paginator.num_pages }}
+                </span>
+                
+                {% if captures.has_next %}
+                    <a href="?page={{ captures.next_page_number }}{% if filter_type != 'all' %}&type={{ filter_type }}{% endif %}" 
+                       class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+                        Next
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">No photos yet</h3>
+            <p class="text-gray-600 text-sm">Photos will appear here once mail is detected</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+
+
+
+
+
+

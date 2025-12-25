@@ -1,0 +1,443 @@
+{% extends 'web/base.html' %}
+
+{% block title %}Dashboard - Smart Mailbox{% endblock %}
+
+{% block extra_css %}
+<style>
+    .mail-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .mail-card:active {
+        transform: scale(0.98);
+    }
+    .ai-tag {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        margin: 2px;
+    }
+    .tag-package { background: #10b981; color: white; }
+    .tag-letter { background: #3b82f6; color: white; }
+    .tag-envelope { background: #f59e0b; color: white; }
+    .tag-size { background: #8b5cf6; color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-6 content-wrapper">
+    <!-- Header Stats -->
+    <div class="mb-6 grid grid-cols-2 gap-4">
+        <div class="bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl p-4 text-white">
+            <div class="text-sm opacity-90">Total Devices</div>
+            <div class="text-3xl font-bold">{{ total_devices }}</div>
+            <div class="text-xs opacity-75 mt-1">{{ online_devices }} online</div>
+        </div>
+        <div class="bg-gradient-to-br from-green-500 to-teal-600 rounded-xl p-4 text-white">
+            <div class="text-sm opacity-90">Recent Mail</div>
+            <div class="text-3xl font-bold">{{ recent_mail_count }}</div>
+            <div class="text-xs opacity-75 mt-1">Last 20 items</div>
+        </div>
+    </div>
+
+    <!-- Recent Mail Section -->
+    <div class="mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-gray-900">Recent Mail</h2>
+            <div class="flex items-center gap-3">
+                <button id="checkMailboxBtn" class="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium text-sm hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed {% if not devices %}opacity-75{% endif %}">
+                    <span id="checkMailboxText">📬 Check Mailbox</span>
+                </button>
+                <div id="clickLimitDisplay" class="text-xs text-gray-500">
+                    <span id="clicksUsed">0</span>/<span id="clicksLimit">3</span> clicks today
+                </div>
+                <a href="{% url 'web:photo_gallery' %}" class="text-sm text-blue-600 font-medium">View All →</a>
+            </div>
+        </div>
+        
+        {% if recent_mail %}
+            <div class="space-y-3">
+                {% for capture in recent_mail %}
+                    {% with analysis=capture.analysis %}
+                    <a href="{% url 'web:device_detail' capture.device.serial_number %}" class="block mail-card">
+                        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                            <div class="flex items-start gap-4">
+                                <!-- Thumbnail -->
+                                <div class="flex-shrink-0">
+                                    <div class="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center">
+                                        {% if capture.image_base64 %}
+                                            <img src="data:image/jpeg;base64,{{ capture.image_base64|slice:':500' }}" 
+                                                 alt="Mail capture" 
+                                                 class="w-full h-full object-cover"
+                                                 loading="lazy">
+                                        {% else %}
+                                            <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                            </svg>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <!-- Content -->
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <div>
+                                            <h3 class="text-sm font-semibold text-gray-900 truncate">
+                                                {{ capture.device.serial_number }}
+                                            </h3>
+                                            <p class="text-xs text-gray-500 mt-1">
+                                                {{ capture.timestamp|timesince }} ago
+                                            </p>
+                                        </div>
+                                        {% if analysis %}
+                                            <div class="flex flex-wrap gap-1 ml-2">
+                                                {% if analysis.package_detected %}
+                                                    <span class="ai-tag tag-package">📦 Package</span>
+                                                {% endif %}
+                                                {% if analysis.letter_detected %}
+                                                    <span class="ai-tag tag-letter">✉️ Letter</span>
+                                                {% endif %}
+                                                {% if analysis.envelope_detected %}
+                                                    <span class="ai-tag tag-envelope">📮 Envelope</span>
+                                                {% endif %}
+                                                {% if analysis.estimated_size %}
+                                                    <span class="ai-tag tag-size">{{ analysis.estimated_size }}</span>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    
+                                    {% if analysis %}
+                                        <p class="text-sm text-gray-700 mb-2 line-clamp-2">
+                                            {{ analysis.summary }}
+                                        </p>
+                                        
+                                        {% if analysis.logos_detected %}
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                {% for logo in analysis.logos_detected|slice:":3" %}
+                                                    <span class="text-xs px-2 py-1 bg-purple-100 text-purple-700 rounded-full">
+                                                        {{ logo.description }}
+                                                    </span>
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <p class="text-sm text-gray-500">Analysis pending...</p>
+                                    {% endif %}
+                                    
+                                    {% if capture.battery_voltage %}
+                                        <div class="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            <span>{{ capture.battery_voltage|floatformat:2 }}V</span>
+                                            {% if capture.solar_charging %}
+                                                <span class="text-green-600">⚡ Charging</span>
+                                            {% endif %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                    {% endwith %}
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+                <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                </svg>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">No mail yet</h3>
+                <p class="text-gray-600 text-sm mb-4">Mail detections will appear here</p>
+                {% if devices %}
+                <button id="checkMailboxBtnEmpty" class="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    <span id="checkMailboxTextEmpty">📬 Check Mailbox Now</span>
+                </button>
+                <div id="clickLimitDisplayEmpty" class="text-xs text-gray-500 mt-3">
+                    <span id="clicksUsedEmpty">0</span>/<span id="clicksLimitEmpty">3</span> clicks used today
+                </div>
+                {% else %}
+                <button id="checkMailboxBtnNoDevice" class="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors mb-3" onclick="window.location.href='{% url 'web:claim_device' %}'">
+                    📬 Check Mailbox (Add Device First)
+                </button>
+                <p class="text-xs text-gray-500">You need to add a device first to check your mailbox</p>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Devices Section -->
+    <div class="mb-6">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold text-gray-900">My Devices</h2>
+            <a href="{% url 'web:claim_device' %}" class="text-sm text-blue-600 font-medium">+ Add Device</a>
+        </div>
+        
+        {% if devices %}
+            <div class="space-y-3">
+                {% for device in devices %}
+                <a href="{% url 'web:device_detail' device.serial_number %}" class="block">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
+                                    {{ device.serial_number|slice:"-3:" }}
+                                </div>
+                                <div>
+                                    <h3 class="font-semibold text-gray-900">{{ device.serial_number }}</h3>
+                                    <p class="text-xs text-gray-500">Last seen {{ device.last_seen|timesince }} ago</p>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                {% if device.status == 'online' %}
+                                    <span class="w-2 h-2 bg-green-500 rounded-full"></span>
+                                {% else %}
+                                    <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                                {% endif %}
+                                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+                <p class="text-gray-600 mb-4">No devices yet</p>
+                <a href="{% url 'web:claim_device' %}" class="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg font-medium">
+                    Add Your First Device
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Result Modal -->
+<div id="resultModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl max-w-md w-full p-6">
+        <div id="resultContent">
+            <!-- Content will be inserted here -->
+        </div>
+        <button id="closeModal" class="mt-4 w-full px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">
+            Close
+        </button>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkMailboxBtn = document.getElementById('checkMailboxBtn') || document.getElementById('checkMailboxBtnEmpty');
+    const checkMailboxText = document.getElementById('checkMailboxText') || document.getElementById('checkMailboxTextEmpty');
+    const clickLimitDisplay = document.getElementById('clickLimitDisplay') || document.getElementById('clickLimitDisplayEmpty');
+    const clicksUsedSpan = document.getElementById('clicksUsed') || document.getElementById('clicksUsedEmpty');
+    const clicksLimitSpan = document.getElementById('clicksLimit') || document.getElementById('clicksLimitEmpty');
+    const resultModal = document.getElementById('resultModal');
+    const resultContent = document.getElementById('resultContent');
+    const closeModal = document.getElementById('closeModal');
+    
+    let clickStatus = null;
+    
+    // Load click status on page load
+    loadClickStatus();
+    
+    // Load click status every minute
+    setInterval(loadClickStatus, 60000);
+    
+    function loadClickStatus() {
+        fetch('/api/device/click-status/')
+            .then(response => response.json())
+            .then(data => {
+                clickStatus = data;
+                updateUI();
+            })
+            .catch(error => {
+                console.error('Error loading click status:', error);
+            });
+    }
+    
+    function updateUI() {
+        if (!clickStatus || !clickStatus.has_device) {
+            if (checkMailboxBtn) checkMailboxBtn.disabled = true;
+            if (clickLimitDisplay) clickLimitDisplay.classList.add('hidden');
+            return;
+        }
+        
+        // Show click limit for both free and premium users
+        if (clickLimitDisplay) {
+            clickLimitDisplay.classList.remove('hidden');
+            if (clicksUsedSpan) clicksUsedSpan.textContent = clickStatus.clicks_used_today;
+            if (clicksLimitSpan) clicksLimitSpan.textContent = clickStatus.clicks_limit;
+        }
+        
+        if (checkMailboxBtn) {
+            checkMailboxBtn.disabled = !clickStatus.can_click;
+            if (!clickStatus.can_click) {
+                checkMailboxBtn.classList.add('opacity-50');
+            } else {
+                checkMailboxBtn.classList.remove('opacity-50');
+            }
+        }
+    }
+    
+    if (checkMailboxBtn) {
+        checkMailboxBtn.addEventListener('click', function() {
+            const btn = this;
+            
+            if (btn.disabled) {
+                // Check why button is disabled
+                if (clickStatus && !clickStatus.has_device) {
+                    showResult('info', 'Add Device First', 
+                        'You need to add a device before you can check your mailbox. Click "Add Device" in the "My Devices" section below.');
+                    return;
+                }
+                if (clickStatus && !clickStatus.can_click) {
+                    showResult('error', 'Daily Limit Reached', 
+                        `You have used all ${clickStatus.clicks_limit} manual clicks for today. The limit resets at midnight.`);
+                }
+                return;
+            }
+            
+            // Disable button and show loading
+            btn.disabled = true;
+            const originalText = checkMailboxText.textContent;
+            checkMailboxText.textContent = '⏳ Checking...';
+            
+            // Get first device
+            fetch('/api/device/click-status/')
+                .then(response => response.json())
+                .then(data => {
+                    // Check if user has a device
+                    if (!data.has_device) {
+                        showResult('info', 'Add Device First', 
+                            'You need to add a device before you can check your mailbox. Please add a device first.');
+                        btn.disabled = false;
+                        checkMailboxText.textContent = originalText;
+                        return;
+                    }
+                    
+                    const deviceSerial = data.device_serial;
+                    
+                    // Trigger manual capture
+                    return fetch('/api/device/trigger/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCookie('csrftoken')
+                        },
+                        body: JSON.stringify({
+                            device_serial: deviceSerial
+                        })
+                    }).then(response => {
+                        return response.json().then(data => ({
+                            status: response.status,
+                            data: data
+                        }));
+                    });
+                })
+                .then(result => {
+                    if (result.status === 200 || result.status === 202) {
+                        const data = result.data;
+                        showResult('success', 'Check Requested', 
+                            data.message || 'Device will capture photo on next wake cycle (within 2 hours). You will receive a notification when the photo is ready.');
+                        
+                        // Reload click status
+                        setTimeout(loadClickStatus, 1000);
+                    } else if (result.status === 429) {
+                        const data = result.data;
+                        showResult('error', 'Daily Limit Reached', 
+                            data.message || 'You have reached your daily limit of manual clicks.');
+                        loadClickStatus();
+                    } else {
+                        const data = result.data;
+                        showResult('error', 'Error', data.error || 'Failed to trigger device.');
+                        checkMailboxBtn.disabled = false;
+                        checkMailboxText.textContent = originalText;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showResult('error', 'Error', 'Network error. Please try again.');
+                    checkMailboxBtn.disabled = false;
+                    checkMailboxText.textContent = originalText;
+                });
+        });
+    }
+    
+    function showResult(type, title, message) {
+        const icon = type === 'success' ? '✅' : type === 'info' ? 'ℹ️' : '❌';
+        const bgColor = type === 'success' ? 'bg-green-50' : type === 'info' ? 'bg-blue-50' : 'bg-red-50';
+        const textColor = type === 'success' ? 'text-green-800' : type === 'info' ? 'text-blue-800' : 'text-red-800';
+        
+        resultContent.innerHTML = `
+            <div class="${bgColor} ${textColor} p-4 rounded-lg mb-4">
+                <div class="text-2xl mb-2">${icon}</div>
+                <h3 class="font-bold text-lg mb-2">${title}</h3>
+                <p class="text-sm">${message}</p>
+            </div>
+        `;
+        resultModal.classList.remove('hidden');
+    }
+    
+    if (closeModal) {
+        closeModal.addEventListener('click', function() {
+            resultModal.classList.add('hidden');
+            // Reload page to show new capture if available
+            setTimeout(() => location.reload(), 500);
+        });
+    }
+    
+    // Close modal on outside click
+    resultModal.addEventListener('click', function(e) {
+        if (e.target === resultModal) {
+            resultModal.classList.add('hidden');
+            setTimeout(() => location.reload(), 500);
+        }
+    });
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Poll for new captures after manual trigger
+    let pollInterval = null;
+    function startPolling() {
+        if (pollInterval) return;
+        let pollCount = 0;
+        const maxPolls = 60; // Poll for 5 minutes (60 * 5 seconds)
+        
+        pollInterval = setInterval(() => {
+            pollCount++;
+            if (pollCount > maxPolls) {
+                clearInterval(pollInterval);
+                pollInterval = null;
+                return;
+            }
+            
+            // Check for new captures
+            fetch(window.location.href)
+                .then(response => response.text())
+                .then(html => {
+                    // Simple check - if page has new content, reload
+                    // In production, use WebSocket or API polling
+                });
+        }, 5000); // Poll every 5 seconds
+    }
+});
+</script>
+{% endblock %}

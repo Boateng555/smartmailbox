@@ -1,0 +1,209 @@
+{% extends 'web/base.html' %}
+
+{% block title %}Settings - Smart Mailbox{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-6 content-wrapper">
+    <h1 class="text-2xl font-bold text-gray-900 mb-6">Settings</h1>
+    
+    <form method="POST" class="space-y-6">
+        {% csrf_token %}
+        
+        <!-- Subscription Management -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Subscription</h2>
+            
+            {% if subscription %}
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between py-3 border-b border-gray-200">
+                        <div class="flex-1">
+                            <h3 class="text-sm font-medium text-gray-900">Current Plan</h3>
+                            <p class="text-xs text-gray-500 mt-1">{{ subscription.plan.name }} - ${{ subscription.plan.price_monthly }}/month</p>
+                        </div>
+                        <span class="px-3 py-1 text-xs font-medium rounded-full 
+                            {% if subscription.status == 'active' %}bg-green-100 text-green-800
+                            {% elif subscription.status == 'trial' %}bg-blue-100 text-blue-800
+                            {% elif subscription.status == 'suspended' %}bg-red-100 text-red-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ subscription.get_status_display }}
+                        </span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between py-3 border-b border-gray-200">
+                        <div class="flex-1">
+                            <h3 class="text-sm font-medium text-gray-900">Notifications</h3>
+                            <p class="text-xs text-gray-500 mt-1">
+                                {% if subscription.plan.notification_limit == 0 %}
+                                    Unlimited notifications
+                                {% else %}
+                                    {{ subscription.plan.notification_limit }} notifications/month
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between py-3 border-b border-gray-200">
+                        <div class="flex-1">
+                            <h3 class="text-sm font-medium text-gray-900">Data Limit</h3>
+                            <p class="text-xs text-gray-500 mt-1">
+                                {% if subscription.plan.data_limit_mb == 0 %}
+                                    Unlimited data
+                                {% else %}
+                                    {{ subscription.plan.data_limit_mb }}MB/month
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    {% if subscription.is_in_trial %}
+                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                            <p class="text-sm text-blue-800">
+                                <strong>Trial Period:</strong> 
+                                {% if subscription.trial_end %}
+                                    Expires {{ subscription.trial_end|date:"M d, Y" }}
+                                {% endif %}
+                            </p>
+                        </div>
+                    {% endif %}
+                    
+                    {% if subscription.status == 'suspended' and subscription.is_in_grace_period %}
+                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                            <p class="text-sm text-yellow-800">
+                                <strong>Grace Period:</strong> 
+                                Service will be suspended on {{ subscription.grace_period_end|date:"M d, Y" }}. 
+                                Please update your payment method.
+                            </p>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="pt-3">
+                        <a href="{% url 'devices:billing' %}" 
+                           class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                            Manage Subscription
+                        </a>
+                    </div>
+                </div>
+            {% else %}
+                <div class="text-center py-6">
+                    <p class="text-sm text-gray-600 mb-4">No active subscription</p>
+                    <a href="{% url 'devices:billing' %}" 
+                       class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors">
+                        Choose a Plan
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Notification Preferences -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Notification Preferences</h2>
+            
+            <!-- Email Notifications -->
+            <div class="flex items-center justify-between py-3 border-b border-gray-200">
+                <div class="flex-1">
+                    <h3 class="text-sm font-medium text-gray-900">Email Notifications</h3>
+                    <p class="text-xs text-gray-500 mt-1">Receive email alerts when mail is detected</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" name="email_notifications" class="sr-only peer" 
+                           {% if preferences.email_enabled %}checked{% endif %}>
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+            </div>
+            
+            <!-- SMS Notifications -->
+            <div class="flex items-center justify-between py-3 border-b border-gray-200">
+                <div class="flex-1">
+                    <h3 class="text-sm font-medium text-gray-900">SMS Notifications</h3>
+                    <p class="text-xs text-gray-500 mt-1">Receive SMS alerts (requires phone number)</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" name="sms_notifications" class="sr-only peer" 
+                           {% if preferences.sms_enabled %}checked{% endif %}>
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+            </div>
+            
+            <!-- Push Notifications -->
+            <div class="flex items-center justify-between py-3">
+                <div class="flex-1">
+                    <h3 class="text-sm font-medium text-gray-900">Push Notifications</h3>
+                    <p class="text-xs text-gray-500 mt-1">Browser push notifications</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" name="push_notifications" class="sr-only peer" 
+                           {% if preferences.push_enabled %}checked{% endif %}>
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Device Management -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Your Devices</h2>
+            
+            {% if devices %}
+                <div class="space-y-3">
+                    {% for device in devices %}
+                        <div class="flex items-center justify-between py-3 border-b border-gray-200 last:border-0">
+                            <div class="flex-1">
+                                <h3 class="text-sm font-medium text-gray-900">
+                                    {{ device.name|default:device.serial_number }}
+                                </h3>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    Serial: {{ device.serial_number }} | 
+                                    Status: <span class="{% if device.status == 'online' %}text-green-600{% else %}text-gray-600{% endif %}">
+                                        {{ device.get_status_display }}
+                                    </span>
+                                    {% if device.battery_percentage %}
+                                        | Battery: {{ device.battery_percentage }}%
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <a href="{% url 'web:device_detail' device.serial_number %}" 
+                               class="text-xs text-blue-600 hover:text-blue-800">
+                                View
+                            </a>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-sm text-gray-600 text-center py-4">No devices registered</p>
+            {% endif %}
+        </div>
+        
+        <!-- Account Settings -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Account</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                    <input type="text" value="{{ user.username }}" disabled 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" value="{{ user.email }}" disabled 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-500">
+                </div>
+            </div>
+        </div>
+        
+        <!-- Save Button -->
+        <div class="flex justify-end">
+            <button type="submit" class="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-shadow">
+                Save Settings
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+
+
+
+
+
+

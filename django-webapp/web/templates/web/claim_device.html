@@ -1,0 +1,382 @@
+{% extends 'web/base.html' %}
+
+{% block title %}Setup Your Device - SmartCamera{% endblock %}
+
+{% block extra_css %}
+<style>
+    .step {
+        display: none;
+        animation: fadeIn 0.3s ease-in;
+    }
+    .step.active {
+        display: block;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    .step-indicator {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 40px;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .step-dot {
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 16px;
+        transition: all 0.3s;
+        border: 3px solid transparent;
+    }
+    .step-dot.completed {
+        background: #10b981;
+        color: white;
+        border-color: #10b981;
+    }
+    .step-dot.active {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+    }
+    .step-dot.pending {
+        background: #e5e7eb;
+        color: #6b7280;
+        border-color: #e5e7eb;
+    }
+    .step-line {
+        width: 50px;
+        height: 3px;
+        background: #e5e7eb;
+        margin-top: 20px;
+        transition: all 0.3s;
+        border-radius: 2px;
+    }
+    .step-line.completed {
+        background: #10b981;
+    }
+    @media (max-width: 640px) {
+        .step-line {
+            width: 30px;
+        }
+    }
+    .instruction-box {
+        background: #f3f4f6;
+        border-left: 4px solid #667eea;
+        padding: 16px;
+        border-radius: 8px;
+        margin: 20px 0;
+    }
+    .code-block {
+        background: #1f2937;
+        color: #f9fafb;
+        padding: 12px;
+        border-radius: 8px;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        margin: 12px 0;
+        word-break: break-all;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="mb-8 text-center">
+        <h1 class="text-3xl font-bold text-gray-900 mb-2">Setup Your Smart Camera</h1>
+        <p class="text-gray-600">Follow these simple steps to get started</p>
+    </div>
+
+    <!-- Step Indicator -->
+    <div class="step-indicator">
+        <div class="step-dot {% if current_step >= 1 %}active{% else %}pending{% endif %}" id="step1-dot">1</div>
+        <div class="step-line {% if current_step > 1 %}completed{% endif %}" id="line1"></div>
+        <div class="step-dot {% if current_step == 2 %}active{% elif current_step > 2 %}completed{% else %}pending{% endif %}" id="step2-dot">2</div>
+        <div class="step-line {% if current_step > 2 %}completed{% endif %}" id="line2"></div>
+        <div class="step-dot {% if current_step == 3 %}active{% elif current_step > 3 %}completed{% else %}pending{% endif %}" id="step3-dot">3</div>
+        <div class="step-line {% if current_step > 3 %}completed{% endif %}" id="line3"></div>
+        <div class="step-dot {% if current_step == 4 %}active{% elif current_step > 4 %}completed{% else %}pending{% endif %}" id="step4-dot">4</div>
+    </div>
+
+    <!-- Step 1: Turn on device -->
+    <div class="step {% if current_step == 1 %}active{% endif %}" id="step1">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+            <div class="mb-6">
+                <svg class="w-24 h-24 mx-auto text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Step 1: Turn On Your Device</h2>
+            <p class="text-gray-600 mb-6">
+                Simply turn on your Smart Camera using the power button or switch. 
+                The LED indicator will start blinking to show it's working.
+            </p>
+            <div class="instruction-box text-left">
+                <p class="text-sm text-gray-700 mb-2"><strong>What to look for:</strong></p>
+                <ul class="text-sm text-gray-600 space-y-1 list-disc list-inside">
+                    <li>Press the power button or flip the switch to turn on</li>
+                    <li>LED light will start blinking (this means it's working)</li>
+                    <li>Device is ready when LED blinks steadily</li>
+                </ul>
+            </div>
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 text-left">
+                <p class="text-sm text-green-900">
+                    <strong>✓ That's it!</strong> No cables, no plugging in. Just turn it on and you're ready for the next step.
+                </p>
+            </div>
+            <button onclick="nextStep()" class="w-full py-3 px-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-shadow touch-target mt-6">
+                Device is On ✓
+            </button>
+        </div>
+    </div>
+
+    <!-- Step 2: Connect to setup WiFi -->
+    <div class="step {% if current_step == 2 %}active{% endif %}" id="step2">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+            <div class="mb-6">
+                <svg class="w-24 h-24 mx-auto text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path>
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Step 2: Connect to Setup WiFi</h2>
+            <p class="text-gray-600 mb-6">
+                On your phone or computer, go to WiFi settings and look for a network named:
+            </p>
+            <div class="code-block text-center">
+                <strong>{{ setup_wifi_ssid }}</strong>
+            </div>
+            <div class="instruction-box text-left">
+                <p class="text-sm text-gray-700 mb-2"><strong>Instructions:</strong></p>
+                <ol class="text-sm text-gray-600 space-y-2 list-decimal list-inside">
+                    <li>Open WiFi settings on your phone or computer</li>
+                    <li>Look for <strong class="text-gray-900">{{ setup_wifi_ssid }}</strong></li>
+                    <li>Connect to this network (no password required)</li>
+                    <li>Wait for connection confirmation</li>
+                </ol>
+            </div>
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 text-left">
+                <p class="text-sm text-yellow-900">
+                    <strong>⚠️ Note:</strong> You'll temporarily lose internet connection. This is normal during setup. 
+                    You'll reconnect to your home WiFi in the next step.
+                </p>
+            </div>
+            <div class="flex gap-4">
+                <button onclick="prevStep()" class="flex-1 py-3 px-6 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors touch-target">
+                    Back
+                </button>
+                <button onclick="nextStep()" class="flex-1 py-3 px-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-shadow touch-target">
+                    Connected ✓
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 3: Enter home WiFi credentials -->
+    <div class="step {% if current_step == 3 %}active{% endif %}" id="step3">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+            <div class="text-center mb-6">
+                <svg class="w-24 h-24 mx-auto text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-4 text-center">Step 3: Configure WiFi</h2>
+            <p class="text-gray-600 mb-6 text-center">
+                Enter your home WiFi network credentials so your device can connect.
+            </p>
+
+            <div class="instruction-box">
+                <p class="text-sm font-semibold text-gray-900 mb-3">📱 On the device connected to {{ setup_wifi_ssid }}:</p>
+                <ol class="text-sm text-gray-700 space-y-3 list-decimal list-inside">
+                    <li>Open a web browser (Chrome, Safari, etc.)</li>
+                    <li>Go to this address:</li>
+                </ol>
+                <div class="code-block text-center my-3">
+                    {{ setup_wifi_url }}
+                </div>
+                <ol class="text-sm text-gray-700 space-y-3 list-decimal list-inside" start="3">
+                    <li>Enter your home WiFi network name (SSID)</li>
+                    <li>Enter your home WiFi password</li>
+                    <li>Click <strong>"Connect & Reboot"</strong></li>
+                    <li>Wait 30-60 seconds for the device to restart</li>
+                </ol>
+            </div>
+
+            <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <p class="text-sm text-green-900">
+                    <strong>✓ Success indicators:</strong> The device will restart and connect to your home WiFi. 
+                    The LED should stop blinking and remain steady when connected.
+                </p>
+            </div>
+
+            <div class="flex gap-4">
+                <button onclick="prevStep()" class="flex-1 py-3 px-6 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors touch-target">
+                    Back
+                </button>
+                <button onclick="nextStep()" class="flex-1 py-3 px-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-shadow touch-target">
+                    WiFi Configured ✓
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 4: Return to app and claim device -->
+    <div class="step {% if current_step == 4 %}active{% endif %}" id="step4">
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+            <div class="text-center mb-6">
+                <svg class="w-24 h-24 mx-auto text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-4 text-center">Step 4: Claim Your Device</h2>
+            <p class="text-gray-600 mb-6 text-center">
+                Reconnect to your home WiFi, then enter your device serial number below to complete setup.
+            </p>
+
+            <!-- Messages -->
+            {% if messages %}
+                {% for message in messages %}
+                <div class="mb-4 p-4 rounded-lg {% if message.tags == 'error' %}bg-red-50 text-red-800 border border-red-200{% elif message.tags == 'success' %}bg-green-50 text-green-800 border border-green-200{% else %}bg-blue-50 text-blue-800 border border-blue-200{% endif %}">
+                    <div class="flex items-center gap-2">
+                        {% if message.tags == 'error' %}
+                            <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                            </svg>
+                        {% elif message.tags == 'success' %}
+                            <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                            </svg>
+                        {% endif %}
+                        <span>{{ message }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="POST" action="{% url 'web:claim_device' %}" class="space-y-6">
+                {% csrf_token %}
+                
+                <!-- Serial Number -->
+                <div>
+                    <label for="serial_number" class="block text-sm font-medium text-gray-700 mb-2">
+                        Device Serial Number
+                    </label>
+                    <input 
+                        type="text" 
+                        id="serial_number" 
+                        name="serial_number" 
+                        required
+                        placeholder="ESP-123456"
+                        class="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-lg uppercase"
+                        pattern="ESP-[A-F0-9]{6}"
+                        title="Format: ESP-XXXXXX (6 hex characters)"
+                        autocomplete="off"
+                    >
+                    <p class="mt-2 text-sm text-gray-500">
+                        Find this on the label on your device or in the product box. Format: <strong>ESP-XXXXXX</strong>
+                    </p>
+                </div>
+
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p class="text-sm text-blue-900">
+                        <strong>💡 Tip:</strong> Make sure you're connected to your home WiFi (not {{ setup_wifi_ssid }}) 
+                        before submitting. Your device should now be online and ready to claim!
+                    </p>
+                </div>
+
+                <div class="flex gap-4">
+                    <button 
+                        type="button" 
+                        onclick="prevStep()" 
+                        class="flex-1 py-3 px-6 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition-colors touch-target"
+                    >
+                        Back
+                    </button>
+                    <button 
+                        type="submit" 
+                        class="flex-1 py-3 px-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-shadow touch-target"
+                    >
+                        Claim Device
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let currentStep = {{ current_step|default:1 }};
+
+    function updateStepIndicators() {
+        // Update all step dots
+        for (let i = 1; i <= 4; i++) {
+            const dot = document.getElementById(`step${i}-dot`);
+            const line = document.getElementById(`line${i}`);
+            
+            if (i < currentStep) {
+                dot.classList.remove('active', 'pending');
+                dot.classList.add('completed');
+                if (line) line.classList.add('completed');
+            } else if (i === currentStep) {
+                dot.classList.remove('completed', 'pending');
+                dot.classList.add('active');
+            } else {
+                dot.classList.remove('active', 'completed');
+                dot.classList.add('pending');
+                if (line) line.classList.remove('completed');
+            }
+        }
+    }
+
+    function showStep(step) {
+        // Hide all steps
+        for (let i = 1; i <= 4; i++) {
+            document.getElementById(`step${i}`).classList.remove('active');
+        }
+        
+        // Show current step
+        document.getElementById(`step${step}`).classList.add('active');
+        currentStep = step;
+        updateStepIndicators();
+        
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function nextStep() {
+        if (currentStep < 4) {
+            showStep(currentStep + 1);
+        }
+    }
+
+    function prevStep() {
+        if (currentStep > 1) {
+            showStep(currentStep - 1);
+        }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        updateStepIndicators();
+        showStep(currentStep);
+    });
+
+    // Keyboard navigation
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'ArrowLeft') {
+            prevStep();
+        } else if (e.key === 'ArrowRight') {
+            nextStep();
+        }
+    });
+</script>
+{% endblock %}
