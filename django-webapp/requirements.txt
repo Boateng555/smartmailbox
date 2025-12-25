@@ -34,7 +34,7 @@ google-auth>=2.23.0
 
 # Email support
 django-ses>=3.0.0  # For AWS SES (or use django.core.mail for SMTP)
-sendgrid-django>=5.3.0  # For SendGrid email service
+sendgrid-django>=4.2.0  # For SendGrid email service
 
 # SMS support
 twilio>=8.0.0  # For SMS notifications via Twilio
