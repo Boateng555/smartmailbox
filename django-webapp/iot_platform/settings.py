@@ -180,7 +180,12 @@ if not DEBUG:
     # Nginx/Proxy settings
     USE_TZ = True
     SECURE_PROXY_SSL_HEADER = None  # Set to ('HTTP_X_FORWARDED_PROTO', 'https') if using HTTPS
-    CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://194.164.59.137', cast=Csv)
+    # CSRF trusted origins for Nginx proxy
+    _csrf_origins = config('CSRF_TRUSTED_ORIGINS', default='http://194.164.59.137')
+    if isinstance(_csrf_origins, str):
+        CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in _csrf_origins.split(',') if origin.strip()]
+    else:
+        CSRF_TRUSTED_ORIGINS = _csrf_origins if _csrf_origins else ['http://194.164.59.137']
 
 # Media files (for firmware uploads)
 MEDIA_URL = '/media/'
